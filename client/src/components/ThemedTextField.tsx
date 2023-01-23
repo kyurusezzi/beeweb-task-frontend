@@ -8,6 +8,7 @@ export interface ThemedTextFieldProps {
   isRequired?: boolean;
   label?: string;
   register?: UseFormRegister<FieldValues>;
+  changeHandler?: (event: any) => void;
 }
 
 const ThemedTextField: FC<ThemedTextFieldProps> = ({
@@ -16,6 +17,7 @@ const ThemedTextField: FC<ThemedTextFieldProps> = ({
   isRequired = false,
   label,
   register,
+  changeHandler,
 }) => {
   return (
     <TextField
@@ -27,7 +29,7 @@ const ThemedTextField: FC<ThemedTextFieldProps> = ({
         m: 2,
       }}
       autoComplete="off"
-      {...register?.(name)}
+      {...register?.(name, { onChange: changeHandler })}
     />
   );
 };

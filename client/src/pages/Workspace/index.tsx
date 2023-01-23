@@ -1,14 +1,28 @@
-import { Box, Button, Grid } from "@mui/material";
 import { FC, useEffect, useState } from "react";
+import { useLocation, useNavigate, createSearchParams } from "react-router-dom";
+
+import { Box, Button, Grid, Typography } from "@mui/material";
+
 import WorkspaceItem from "../../components/WorkspaceItem";
+import WorkspaceDialogForm from "../../components/WorkspaceDialogForm";
+
+import AuthService from "../../services/auth.service";
 import { WorkspaceDto } from "../../services/interfaces/workspaces.interface";
 import workspaceService from "../../services/workspace.service";
-import { Typography } from "@mui/material";
-import WorkspaceForm from "../../components/WorkspaceForm";
+import subdomainService from "../../services/subdomain.service";
+import debounce from "../../helpers/debounce";
 
 const Workspace: FC = () => {
   const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([]);
-  const [isOpenDialog, setIsOpenDialog] = useState(false);
+  const [updatingWorkspaceId, setUpdatingWorkspaceId] = useState(0);
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+
+  const [suggestedSubdomains, setSuggestedSubdomains] = useState<string[]>([]);
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -19,10 +33,63 @@ const Workspace: FC = () => {
 
   const createHandler = async (workspaceData: any) => {
     const newWorkspace = await workspaceService.createWorkspace(workspaceData);
-    console.log(newWorkspace);
-    setWorkspaces([...workspaces, newWorkspace]);
-    setIsOpenDialog(false);
+
+    setWorkspaces((prevWorkspaces) => [...prevWorkspaces, newWorkspace]);
+    setIsCreateDialogOpen(false);
   };
+
+  const updateHandler = async (workspaceUpdateData: any) => {
+    workspaceUpdateData.id = updatingWorkspaceId;
+    const updatedWorkspace = await workspaceService.updateWorkspace(
+      workspaceUpdateData
+    );
+
+    const updatedIndex = workspaces.findIndex(
+      ({ id }) => id === updatedWorkspace.id
+    );
+    setWorkspaces((prevWorkspaces) =>
+      prevWorkspaces.map((workspace, index) => {
+        if (updatedIndex === index) {
+          return updatedWorkspace;
+        }
+        return workspace;
+      })
+    );
+
+    setIsUpdateDialogOpen(false);
+  };
+
+  const deleteHandler = async (workspaceId: number) => {
+    const { deletedCount } = await workspaceService.deleteWorkspace(
+      workspaceId
+    );
+
+    if (deletedCount) {
+      setWorkspaces((prevWorkspaces) =>
+        prevWorkspaces.filter(({ id }) => id !== workspaceId)
+      );
+    }
+  };
+
+  const changeHandler = debounce(async (event: any) => {
+    const searchParams = createSearchParams({ subdomain: event.target.value });
+
+    const data = await subdomainService.getSubdomainSuggestions(
+      searchParams.toString()
+    );
+    if (!data.isAvailable && !data.suggestions) {
+      setSuggestedSubdomains([]);
+      return;
+    }
+    if (data.isAvailable && data.suggestions) {
+      setSuggestedSubdomains([]);
+      return;
+    }
+    if (!data.isAvailable && data.suggestions?.length) {
+      setSuggestedSubdomains(data.suggestions);
+      return;
+    }
+  }, 1000);
 
   return (
     <>
@@ -35,23 +102,48 @@ const Workspace: FC = () => {
           }}
         >
           <Typography variant="h4">Workspaces</Typography>
-          <Button variant="contained" onClick={() => setIsOpenDialog(true)}>
+
+          <Typography variant="h6">{location.state?.user.fullName}</Typography>
+
+          <Button
+            variant="contained"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
             Create a new workspace
           </Button>
         </Box>
         <Grid container spacing={2}>
           {workspaces.map((workspace) => (
             <Grid item xs={12} sm={6} md={3} lg={2} key={workspace.id}>
-              <WorkspaceItem workspace={workspace} />
+              <WorkspaceItem
+                workspace={workspace}
+                openDialogAndGetWSId={(id: number) => {
+                  setIsUpdateDialogOpen(true);
+                  setUpdatingWorkspaceId(id);
+                }}
+                deleteHandler={deleteHandler}
+              />
             </Grid>
           ))}
         </Grid>
+        <Box marginTop={80}>
+          <Button
+            variant="contained"
+            onClick={() => {
+              AuthService.removeToken();
+              navigate("/login");
+            }}
+          >
+            LOG OUT
+          </Button>
+        </Box>
       </Box>
-      <WorkspaceForm
+
+      <WorkspaceDialogForm
         formTitle="Create Workspace"
         buttonText="CREATE"
-        isOpen={isOpenDialog}
-        setIsOpen={setIsOpenDialog}
+        isOpen={isCreateDialogOpen}
+        setIsOpen={setIsCreateDialogOpen}
         buttonClickHandler={createHandler}
         fieldsConfigs={[
           { name: "name", label: "Name", isRequired: true },
@@ -61,6 +153,17 @@ const Workspace: FC = () => {
             isRequired: true,
           },
         ]}
+        changeHandler={changeHandler}
+        suggestedSubdomains={suggestedSubdomains}
+      />
+
+      <WorkspaceDialogForm
+        formTitle="Update Workspace"
+        buttonText="UPDATE"
+        isOpen={isUpdateDialogOpen}
+        setIsOpen={setIsUpdateDialogOpen}
+        buttonClickHandler={updateHandler}
+        fieldsConfigs={[{ name: "name", label: "Name", isRequired: true }]}
       />
     </>
   );

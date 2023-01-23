@@ -11,9 +11,9 @@ const Login: FC = () => {
   const navigate = useNavigate();
 
   const loginHandler = async (data: LoginRequestDto) => {
-    const { success } = await authService.login(data);
+    const { success, user } = await authService.login(data);
     if (success) {
-      navigate("/workspaces");
+      navigate("/workspaces", { state: { user } });
     }
   };
 

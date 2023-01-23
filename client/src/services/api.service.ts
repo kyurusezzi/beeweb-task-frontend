@@ -33,4 +33,21 @@ export class ApiService {
     });
     return response.json();
   }
+
+  static async patch(path: string, body: any, includeAuth?: boolean) {
+    const response = await fetch(`${HOST}${path}`, {
+      method: "PATCH",
+      headers: this.getHeaders({ includeAuth }),
+      body: JSON.stringify(body),
+    });
+    return response.json();
+  }
+
+  static async delete(path: string, includeAuth?: boolean) {
+    const response = await fetch(`${HOST}${path}`, {
+      method: "DELETE",
+      headers: this.getHeaders({ includeAuth }),
+    });
+    return response.json();
+  }
 }

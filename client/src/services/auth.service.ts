@@ -8,16 +8,25 @@ export class AuthService {
   static getToken(): string | null {
     return localStorage.getItem("token");
   }
-  public async signUp(data: SignUpRequestDto): Promise<{ success: boolean }> {
-    const { token } = await ApiService.post("/signup", data);
-    AuthService.setToken(token);
-    return { success: true };
+  static removeToken() {
+    localStorage.removeItem("token");
   }
 
-  public async login(data: LoginRequestDto): Promise<{ success: boolean }> {
-    const { token } = await ApiService.post("/login", data);
+  public async signUp(
+    data: SignUpRequestDto
+  ): Promise<{ success: boolean; user: any }> {
+    const { token, user } = await ApiService.post("/signup", data);
+
     AuthService.setToken(token);
-    return { success: true };
+    return { success: true, user };
+  }
+
+  public async login(
+    data: LoginRequestDto
+  ): Promise<{ success: boolean; user: any }> {
+    const { token, user } = await ApiService.post("/login", data);
+    AuthService.setToken(token);
+    return { success: true, user };
   }
 }
 
