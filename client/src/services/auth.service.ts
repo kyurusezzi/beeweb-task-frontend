@@ -14,11 +14,21 @@ export class AuthService {
 
   public async signUp(
     data: SignUpRequestDto
-  ): Promise<{ success: boolean; user: any }> {
-    const { token, user } = await ApiService.post("/signup", data);
+  ): Promise<{ success: boolean; user?: any }> {
+    const { success } = await ApiService.post("/signup", data);
 
-    AuthService.setToken(token);
-    return { success: true, user };
+    let response;
+
+    if (success) {
+      response = await this.login({
+        email: data.email,
+        password: data.password,
+      });
+      return response;
+    }
+    return { success: false };
+
+    // AuthService.setToken(pla.token);
   }
 
   public async login(
