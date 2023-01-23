@@ -27,8 +27,6 @@ export class AuthService {
       return response;
     }
     return { success: false };
-
-    // AuthService.setToken(pla.token);
   }
 
   public async login(
